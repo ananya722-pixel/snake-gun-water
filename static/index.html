@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snake Water Gun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #E7EEF0;
+    --panel: #FFFFFF;
+    --ink: #142A2E;
+    --muted: #556B70;
+    --line: #C5D3D6;
+    --snake: #23693F;
+    --water: #1F5DB8;
+    --gun: #9A6B00;
+    --win: #1E7A45;
+    --lose: #B3322B;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F1D20;
+      --panel: #172A2E;
+      --ink: #E6F0F1;
+      --muted: #93A9AD;
+      --line: #2A4247;
+      --snake: #5CC58A;
+      --water: #6FA8FF;
+      --gun: #F2C230;
+      --win: #5CC58A;
+      --lose: #FF8A80;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1D20;
+    --panel: #172A2E;
+    --ink: #E6F0F1;
+    --muted: #93A9AD;
+    --line: #2A4247;
+    --snake: #5CC58A;
+    --water: #6FA8FF;
+    --gun: #F2C230;
+    --win: #5CC58A;
+    --lose: #FF8A80;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px 16px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  main {
+    width: 100%;
+    max-width: 620px;
+    display: grid;
+    gap: 22px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(2.3rem, 8vw, 3.6rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.035em;
+  }
+  h1 .w-snake { color: var(--snake); }
+  h1 .w-water { color: var(--water); }
+  h1 .w-gun   { color: var(--gun); }
+
+  .rules {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  /* Score */
+  .score {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--panel);
+  }
+  .score div {
+    padding: 10px 12px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  .score div + div { border-left: 1px solid var(--line); }
+  .score strong {
+    display: block;
+    color: var(--ink);
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  /* Face-off */
+  .arena {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 26px 16px 20px;
+    background: var(--panel);
+    border-radius: 22px;
+    border: 1px solid var(--line);
+  }
+  .side { text-align: center; }
+  .side p { margin: 8px 0 0; color: var(--muted); font-weight: 600; }
+  .hand {
+    font-size: clamp(3.6rem, 16vw, 5.4rem);
+    line-height: 1.1;
+  }
+  .vs { color: var(--muted); font-size: 1.1rem; font-weight: 600; }
+  .hand.pop { animation: pop 320ms cubic-bezier(.2, 1.4, .4, 1); }
+  @keyframes pop {
+    from { transform: scale(0.6); opacity: 0.2; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+
+  .message {
+    min-height: 3.2em;
+    margin: 0;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  .message[data-state="win"]   { color: var(--win); }
+  .message[data-state="lose"]  { color: var(--lose); }
+  .message[data-state="draw"]  { color: var(--muted); }
+  .message[data-state="error"] { color: var(--lose); }
+
+  /* Choices */
+  .choices {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .choice {
+    --c: var(--ink);
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    padding: 16px 8px 12px;
+    background: var(--panel);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 600;
+    border: 1px solid var(--line);
+    border-bottom: 6px solid var(--c);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: transform 120ms ease;
+  }
+  .choice.snake { --c: var(--snake); }
+  .choice.water { --c: var(--water); }
+  .choice.gun   { --c: var(--gun); }
+  .choice .emoji { font-size: 2.6rem; line-height: 1.1; }
+  .choice .key {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 400;
+  }
+  .choice:hover:not(:disabled) { transform: translateY(-3px); }
+  .choice:active:not(:disabled) { transform: translateY(1px); }
+  .choice:disabled { opacity: 0.6; cursor: wait; }
+  .choice:focus-visible,
+  .reset:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 3px;
+  }
+
+  .reset {
+    justify-self: center;
+    padding: 8px 16px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .reset:hover { color: var(--ink); border-color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hand.pop { animation: none; }
+    .choice { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1><span class="w-snake">Snake</span> <span class="w-water">Water</span> <span class="w-gun">Gun</span></h1>
+    <p class="rules">Snake drinks the water. Water dunks the gun. Gun shoots the snake.</p>
+  </header>
+
+  <section class="score" aria-label="Score">
+    <div><strong id="wins">0</strong>Won</div>
+    <div><strong id="draws">0</strong>Drawn</div>
+    <div><strong id="losses">0</strong>Lost</div>
+  </section>
+
+  <section class="arena" aria-label="Current round">
+    <div class="side">
+      <div class="hand" id="youHand" aria-hidden="true">❔</div>
+      <p>You</p>
+    </div>
+    <div class="vs">vs</div>
+    <div class="side">
+      <div class="hand" id="pcHand" aria-hidden="true">❔</div>
+      <p>Computer</p>
+    </div>
+  </section>
+
+  <p class="message" id="message" role="status">Pick snake, water or gun to start.</p>
+
+  <section class="choices" aria-label="Your choice">
+    <button class="choice snake" data-choice="s">
+      <span class="emoji" aria-hidden="true">🐍</span>Snake<span class="key">press S</span>
+    </button>
+    <button class="choice water" data-choice="w">
+      <span class="emoji" aria-hidden="true">💧</span>Water<span class="key">press W</span>
+    </button>
+    <button class="choice gun" data-choice="g">
+      <span class="emoji" aria-hidden="true">🔫</span>Gun<span class="key">press G</span>
+    </button>
+  </section>
+
+  <button class="reset" id="reset" type="button">Reset score</button>
+</main>
+
+<script>
+// Game logic runs right here in the browser (no server needed).
+const ERROR_TEXT = "Something went wrong. Reload the page and try again.";
+const NAMES = { s: "snake", w: "water", g: "gun" };
+const BEATS = { snake: "water", water: "gun", gun: "snake" };   // key beats value
+
+async function getRound(choice) {
+  const you = NAMES[choice];
+  const options = ["snake", "water", "gun"];
+  const computer = options[Math.floor(Math.random() * options.length)];
+  const result = you === computer ? "draw" : (BEATS[you] === computer ? "win" : "lose");
+  return { you: you, computer: computer, result: result };
+}
+
+const EMOJI  = { snake: "🐍", water: "💧", gun: "🔫" };
+const REASON = {
+  snake: "Snake drinks the water.",
+  water: "Water dunks the gun.",
+  gun:   "Gun shoots the snake."
+};
+
+const score   = { win: 0, draw: 0, lose: 0 };
+const message = document.getElementById("message");
+const youHand = document.getElementById("youHand");
+const pcHand  = document.getElementById("pcHand");
+const buttons = Array.from(document.querySelectorAll(".choice"));
+let busy = false;
+
+function setDisabled(state) {
+  buttons.forEach(function (b) { b.disabled = state; });
+}
+
+function popHand(hand, emoji) {
+  hand.textContent = emoji;
+  hand.classList.remove("pop");
+  void hand.offsetWidth;            // restart the animation
+  hand.classList.add("pop");
+}
+
+function renderScore() {
+  document.getElementById("wins").textContent   = score.win;
+  document.getElementById("draws").textContent  = score.draw;
+  document.getElementById("losses").textContent = score.lose;
+}
+
+function showRound(round) {
+  popHand(youHand, EMOJI[round.you]);
+  popHand(pcHand,  EMOJI[round.computer]);
+  score[round.result] += 1;
+  renderScore();
+
+  if (round.result === "win") {
+    message.textContent = "You win! " + REASON[round.you];
+  } else if (round.result === "lose") {
+    message.textContent = "You lose. " + REASON[round.computer];
+  } else {
+    message.textContent = "It's a draw. You both chose " + round.you + ".";
+  }
+  message.dataset.state = round.result;
+}
+
+async function play(choice) {
+  if (busy) return;
+  busy = true;
+  setDisabled(true);
+  try {
+    showRound(await getRound(choice));
+  } catch (err) {
+    message.textContent = ERROR_TEXT;
+    message.dataset.state = "error";
+  } finally {
+    busy = false;
+    setDisabled(false);
+  }
+}
+
+buttons.forEach(function (b) {
+  b.addEventListener("click", function () { play(b.dataset.choice); });
+});
+
+window.addEventListener("keydown", function (e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === "s" || k === "w" || k === "g") play(k);
+});
+
+document.getElementById("reset").addEventListener("click", function () {
+  score.win = score.draw = score.lose = 0;
+  renderScore();
+  youHand.textContent = pcHand.textContent = "❔";
+  message.textContent = "Pick snake, water or gun to start.";
+  message.dataset.state = "";
+});
+</script>
+</body>
+</html>~
